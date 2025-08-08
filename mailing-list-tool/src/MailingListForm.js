@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { supabase } from './supabase';
 
 const MailingListForm = () => {
   const [email, setEmail] = useState('');
@@ -11,14 +12,29 @@ const MailingListForm = () => {
 
     setStatus('submitting');
 
-    try{
-      //no backend yet
-      console.log('Adding to Shaurya\'s mailing list:', email);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setStatus('success');
-      setEmail('');
+    try {
+      const { error } = await supabase
+        .from('subscribers')
+        .insert([{ 
+          email: email.toLowerCase().trim(),
+          user_agent: navigator.userAgent
+        }]);
+
+      if (error) {
+        if(error.code === '23505'){
+          setStatus('duplicate');
+        }
+        else {
+          throw error;
+        }
+      }
+      else {
+        setStatus('success');
+        setEmail('');
+      }
     }
     catch (error) {
+      console.error('Subscription error:', error);
       setStatus('error');
     }
   };
@@ -109,6 +125,11 @@ const MailingListForm = () => {
       backgroundColor: '#110000',
       color: '#ff0000',
       borderColor: '#ff0000'
+    },
+    duplicate: {
+      backgroundColor: '#111100',
+      color: '#ffff00',
+      borderColor: '#ffff00'
     }
   };
 
@@ -174,6 +195,12 @@ const MailingListForm = () => {
       {status ==='success' &&(
         <div style={{...styles.message,...styles.success}}>
           {'>'} subscription confirmed. welcome to the list.
+        </div>
+      )}
+
+      {status ==='duplicate' &&(
+        <div style={{...styles.message, ...styles.duplicate}}>
+          {'>'} email already subscribed.
         </div>
       )}
 
